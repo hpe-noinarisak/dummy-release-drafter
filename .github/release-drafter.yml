@@ -5,7 +5,7 @@ template: |
   # Changelog
   $CHANGES
 
-  See details of [all code changes](https://github.com/$OWNER/onepass-iam-rest-api/compare/$PREVIOUS_TAG...v$RESOLVED_VERSION) since previous release
+  See details of [all code changes](https://github.com/$OWNER/$REPOSITORY/compare/$PREVIOUS_TAG...v$RESOLVED_VERSION) since previous release
 
 categories:
   - title: '🚀 Features'
@@ -25,7 +25,6 @@ categories:
   - title: '🏎 Performance'
     label: 'performance'
 change-template: '- $TITLE @$AUTHOR (#$NUMBER)'
-commitish: main
 version-resolver:
   major:
     labels:
@@ -41,7 +40,6 @@ version-resolver:
   default: patch
 exclude-labels:
   - 'skip-changelog'
-# NOTE: Release-Drafter non-working feature and WIP at https://github.com/release-drafter/release-drafter/pull/1204
 autolabeler:
   - label: 'chore'
     files:
