@@ -1,0 +1,39 @@
+---
+name: Publish
+
+on:
+  push:
+    branches:
+      - "main"
+    paths-ignore:
+      - "README.md"
+      - "**/*.draft.md"
+      - "*.draft.md"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  release_draft:
+      permissions:
+        contents: write  # for release-drafter/release-drafter to create a github release
+        pull-requests: write  # for release-drafter/release-drafter to add label to PR
+      runs-on: ubuntu-latest
+      name: Release Draft
+      timeout-minutes: 60
+      outputs:
+        id: ${{ steps.release_drafter.outputs.id }}
+        name: ${{ steps.release_drafter.outputs.name }}
+        tag_name: ${{ steps.release_drafter.outputs.tag_name }}
+        html_url: ${{ steps.release_drafter.outputs.html_url }}
+        upload_url: ${{ steps.release_drafter.outputs.upload_url }}
+      steps:
+        # Drafts your next Release notes as Pull Requests are merged into "main"
+        - name: Release Drafter
+          id: release_drafter
+          uses: release-drafter/release-drafter@v6
+          with:
+            commitish: main
+          env:
+            GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

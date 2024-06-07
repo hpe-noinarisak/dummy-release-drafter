@@ -1,0 +1,89 @@
+---
+name: Deploy Lambda
+
+on:
+  workflow_call:
+    inputs:
+      release_version:
+        description: 'The version of the release to deploy'
+        required: false
+        type: string
+      target_environment:
+        description: 'The target environment to deploy to'
+        required: true
+        type: string
+      lambda_function:
+        description: 'The name of the lambda function to deploy'
+        required: true
+        type: string
+
+jobs:
+  release:
+    name: Deploy Lambda
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    environment: ${{ inputs.target_environment }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+
+      - name: Check if tag exists
+        id: check_if_tag_exists
+        run: |
+          if [ -z "$(git ls-remote --tags origin ${{ inputs.release_version }})" ]; then
+            echo "tag_exists=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "tag_exists=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Exit if tag does not exist
+        if: steps.check_if_tag_exists.outputs.tag_exists == 'false'
+        run: |
+          echo "Tag ${{ inputs.release_version }} does not exist"
+          exit 1
+
+      - name: Checkout release version
+        if: steps.check_if_tag_exists.outputs.tag_exists == 'true'
+        run: |
+          git checkout ${{ inputs.release_version }}
+
+      - name: Package Lambda Source
+        run: |
+          cd src/${{ inputs.lambda_function }}
+          zip -r ${{ inputs.lambda_function }}.zip *
+
+      - name: Echo inputs
+        run: |
+          echo "lambda_function: ${{ inputs.lambda_function }}"
+          echo "target: ${{ inputs.target_environment }}"
+          echo "vars: ${{ vars.AWS_REGION }}"
+
+      - name: Set up AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+      - name: Deploy Lambda
+        run: |
+          set +e # don't fail if lambda doesn't exist
+          echo "Currrent working directory: $PWD"
+          echo "github.workspace: ${{ github.workspace }}"
+          cd src/${{ inputs.lambda_function }}
+
+          aws lambda get-function --function-name ${{ inputs.lambda_function }} > /dev/null 2>&1
+          if [ 0 -eq $? ]; then
+            echo "Lambda ${{ inputs.lambda_function }} exists"
+            echo "Updating lambda ${{ inputs.lambda_function }}"
+
+            aws lambda update-function-code \
+              --function-name ${{ inputs.lambda_function }} \
+              --zip-file fileb://${{ inputs.lambda_function }}.zip
+
+          else
+            echo "Lambda ${{ inputs.lambda_function }} does not exist"
+            echo "Exiting"
+          fi

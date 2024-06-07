@@ -1,0 +1,38 @@
+---
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_version:
+        description: 'version to release. Ex: v4.3.2'
+        required: true
+        default: 'v'
+      target_environment:
+        description: 'target environment to release to. Ex: dev, itg, prd'
+        required: true
+        type: choice
+        options:
+          - dev
+          - itg
+          - prod
+        default: 'dev'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  release:
+    name: Release Artifact
+    if: ${{ contains('["hpe-noinarisak"]', github.actor) }}
+    strategy:
+      fail-fast: false
+      matrix:
+        lambda_function: ['resource-1', 'resource-2', 'resource-3']
+    uses: ./.github/workflows/deploy-lambda.yml
+    with:
+      lambda_function: ${{ matrix.lambda_function }}
+      release_version: ${{ inputs.release_version }}
+      target_environment: ${{ inputs.target_environment }}
+    secrets: inherit
